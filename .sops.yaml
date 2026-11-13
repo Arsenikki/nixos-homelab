@@ -1,0 +1,17 @@
+# Recipients
+#   admin       — this repo's own age key (1Password: nixos-homelab-sops-age-key).
+#                 Deliberately NOT the kuberseni-gitops key, to limit blast radius.
+#   bedroom-pi  — the Pi's own key, /var/lib/sops-nix/key.txt on the device
+keys:
+  - &admin age1r9umd5prf36v5v40u3uudlar6ekp2tzdv326rwrxx3q6hh9mng5q548t0d
+  - &bedroom-pi age1rnny68ctdlscthnyj8s4sj4hh4q5yzfzt708u5l5q774zvlt996sxpev5t
+
+creation_rules:
+  # The Pi's private age key itself: admin only.
+  - path_regex: hosts/bedroom-pi/age-key\.sops\.json$
+    key_groups:
+      - age: [*admin]
+
+  - path_regex: hosts/bedroom-pi/secrets\.yaml$
+    key_groups:
+      - age: [*admin, *bedroom-pi]

@@ -1,0 +1,42 @@
+name: build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sd-image:
+        description: Also build and upload the bedroom-pi SD image
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bedroom-pi:
+    # Native aarch64; free for public repos. Everything should come from
+    # cache.nixos.org except small local derivations (comin, configs).
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
+      - name: Build system closure
+        run: nix build --print-build-logs .#nixosConfigurations.bedroom-pi.config.system.build.toplevel
+      - name: Build SD image
+        if: github.event_name == 'workflow_dispatch' && inputs.sd-image
+        run: nix build --print-build-logs --out-link sd .#bedroom-pi-sd-image
+      - name: Upload SD image
+        if: github.event_name == 'workflow_dispatch' && inputs.sd-image
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bedroom-pi-sd-image
+          path: sd/sd-image/*.img.zst
+          retention-days: 14
+          compression-level: 0 # already zstd
