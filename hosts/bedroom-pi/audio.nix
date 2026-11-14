@@ -55,6 +55,35 @@ in
   };
   networking.firewall.allowedTCPPorts = [ sendspinPort ];
 
+  # sendspin advertises its IP once, at startup. When the cable is plugged in or
+  # pulled (or Wi-Fi comes and goes) that address goes stale and Music Assistant
+  # keeps dialling a dead IP. Restart sendspin after any end0/wlan0 state change,
+  # debounced: a burst of events schedules one restart 5 s later (a still-pending
+  # transient unit makes systemd-run fail, which we ignore). Also keeps restarts
+  # well under systemd's start rate limit.
+  services.networkd-dispatcher = {
+    enable = true;
+    rules.sendspin-follow-network = {
+      onState = [
+        "routable"
+        "degraded"
+        "no-carrier"
+        "off"
+      ];
+      script = ''
+        #!${pkgs.runtimeShell}
+        case "$IFACE" in
+          end0 | wlan0) ;;
+          *) exit 0 ;;
+        esac
+        echo "network change on $IFACE ($OperationalState): restarting sendspin in 5 s"
+        ${pkgs.systemd}/bin/systemd-run --unit=sendspin-network-restart --collect \
+          --on-active=5s ${pkgs.systemd}/bin/systemctl try-restart sendspin.service || true
+        exit 0
+      '';
+    };
+  };
+
   # Fallback if Sendspin misbehaves (disable sendspin first; MA would merge them):
   # services.squeezelite = {
   #   enable = true;
