@@ -76,6 +76,8 @@ in
           end0 | wlan0) ;;
           *) exit 0 ;;
         esac
+        # IFACE / OperationalState are set by networkd-dispatcher.
+        # shellcheck disable=SC2154
         echo "network change on $IFACE ($OperationalState): restarting sendspin in 5 s"
         ${pkgs.systemd}/bin/systemd-run --unit=sendspin-network-restart --collect \
           --on-active=5s ${pkgs.systemd}/bin/systemctl try-restart sendspin.service || true
