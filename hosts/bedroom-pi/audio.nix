@@ -35,7 +35,9 @@ in
         "--settings-dir"
         "/var/lib/sendspin"
         "--audio-device"
-        "plughw:CARD=Headphones,DEV=0"
+        # PortAudio name, matched by prefix. sendspin 9.1.0 only accepts raw ALSA
+        # names (plughw:CARD=...) if `aplay -L` lists them, which failed here.
+        "bcm2835 Headphones"
         "--port"
         (toString sendspinPort)
         "--disable-mpris"
